@@ -110,7 +110,10 @@ function setUnselected(btnEl) {
 function tryInjectDimOption() {
   if (document.getElementById(DIM_BTN_ID)) return;
 
-  const radiogroup = document.querySelector('[aria-label="Background options"][role="radiogroup"]');
+  // Find the background picker by its radio inputs (language-independent)
+  const bgRadio = document.querySelector('input[name="background-picker"]');
+  if (!bgRadio) return;
+  const radiogroup = bgRadio.closest('[role="radiogroup"]');
   if (!radiogroup) return;
 
   const buttons = radiogroup.querySelectorAll(':scope > div');
