@@ -1,5 +1,6 @@
 # X Dim Mode
 
+> [!TIP]
 > **Now on the Chrome Web Store!** One click to install, updates automatically.
 >
 > [**Install X Dim Mode →**](https://chromewebstore.google.com/detail/x-dim-mode/cplloghlcgkjkogmbehmkhlleopnfogc)
