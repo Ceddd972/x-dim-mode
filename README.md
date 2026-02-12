@@ -17,12 +17,13 @@ X removed the Dim background option from Display settings. This extension brings
 ### Chrome Web Store
 Coming soon.
 
-### Manual install
-1. Download or clone this repo
-2. Open `chrome://extensions`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** and select this folder
-5. Set X to **Lights Out** mode, then select **Dim** from Settings → Display
+### Manual install (takes 30 seconds)
+1. [Download this repo as a ZIP](https://github.com/juanbuis/x-dim-mode/archive/refs/heads/main.zip) and unzip it
+2. Go to `chrome://extensions` in your browser
+3. Turn on **Developer mode** (toggle in the top right corner)
+4. Click **Load unpacked**
+5. Select the unzipped `x-dim-mode-main` folder
+6. Go to [x.com/settings/display](https://x.com/settings/display) — you'll see **Dim** is back as a background option
 
 ## How it works
 
