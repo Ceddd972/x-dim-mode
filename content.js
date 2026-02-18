@@ -2,45 +2,88 @@ const DIM_BASE_ID = "x-dim-base-ext";
 const DIM_BTN_ID = "x-dim-option-btn";
 const DIM_CLASS = "x-dim-active";
 
+// ── Theme Definitions ──────────────────────────────────────────────
+
+const THEMES = {
+  dim:   { hue: 210, sat: 34 },
+  slate: { hue: 210, sat: 8  },
+  jade:  { hue: 150, sat: 34 },
+  plum:  { hue: 270, sat: 34 },
+  dusk:  { hue: 330, sat: 34 },
+  ember: { hue: 25,  sat: 34 },
+};
+
+let _theme = "dim";
+let _customHue = 210;
+
+function paletteFromHue(h, s) {
+  const bSat = Math.round(s * 0.47);
+  return {
+    bg:         `hsl(${h}, ${s}%, 13%)`,
+    bgHover:    `hsl(${h}, ${Math.round(s * 0.74)}%, 16%)`,
+    bgElevated: `hsl(${h}, ${Math.round(s * 0.71)}%, 20%)`,
+    backdrop:   `hsla(${h}, ${s}%, 13%, 0.85)`,
+    text:       `hsl(${h}, ${Math.round(s * 0.32)}%, 60%)`,
+    border:     `hsl(${h}, ${bSat}%, 26%)`,
+    // Raw HSL components for X's CSS variable format (space-separated, no wrapper)
+    bgRaw:      `${h} ${s}% 13%`,
+    borderRaw:  `${h} ${bSat}% 26%`,
+    mutedRaw:   `${h} ${bSat}% 55%`,
+    grayRaw60:  `${h} ${bSat}% 60%`,
+    grayRaw50:  `${h} ${bSat}% 50%`,
+  };
+}
+
+function getActiveHueSat() {
+  if (_theme === "custom") return { hue: _customHue, sat: 34 };
+  return THEMES[_theme] || THEMES.dim;
+}
+
 // ── Dim Theme CSS ──────────────────────────────────────────────────
 
-const BASE_CSS = `
-  /* Dim theme variables */
+function buildThemeCSS() {
+  const { hue: h, sat: s } = getActiveHueSat();
+  const p = paletteFromHue(h, s);
+  return `
   html.${DIM_CLASS} {
-    --xdm-bg: rgb(21, 32, 43);
-    --xdm-bg-hover: rgb(30, 39, 50);
-    --xdm-bg-elevated: rgb(39, 51, 64);
-    --xdm-backdrop: rgba(21, 32, 43, .85);
-    --xdm-text: rgb(139, 152, 165);
-    --xdm-border: rgb(56, 68, 77);
+    --xdm-bg: ${p.bg};
+    --xdm-bg-hover: ${p.bgHover};
+    --xdm-bg-elevated: ${p.bgElevated};
+    --xdm-backdrop: ${p.backdrop};
+    --xdm-text: ${p.text};
+    --xdm-border: ${p.border};
   }
 
   /* Override X's own Lights Out theme variables */
   html.${DIM_CLASS} body.LightsOut {
     --color: var(--xdm-text);
-    --border: 206 16% 26%;
-    --input: 206 16% 26%;
+    --border: ${p.borderRaw};
+    --input: ${p.borderRaw};
     --border-color: var(--xdm-border);
   }
 
   /* Chat / DM interface (Tailwind + shadcn/Radix) */
   html.${DIM_CLASS}[data-theme="dark"],
   html.${DIM_CLASS} [data-theme="dark"] {
-    --background: 215 29% 13%;
-    --border: 206 16% 26%;
-    --input: 206 16% 26%;
-    --muted-foreground: 206 16% 55%;
-    --color-background: 215 29% 13%;
-    --color-gray-0: 215 29% 13%;
-    --color-gray-50: 206 16% 26%;
-    --color-gray-100: 206 16% 26%;
-    --color-gray-700: 206 16% 60%;
-    --color-gray-800: 206 16% 50%;
-  }
+    --background: ${p.bgRaw};
+    --border: ${p.borderRaw};
+    --input: ${p.borderRaw};
+    --muted-foreground: ${p.mutedRaw};
+    --color-background: ${p.bgRaw};
+    --color-gray-0: ${p.bgRaw};
+    --color-gray-50: ${p.borderRaw};
+    --color-gray-100: ${p.borderRaw};
+    --color-gray-700: ${p.grayRaw60};
+    --color-gray-800: ${p.grayRaw50};
+  }`;
+}
 
+// Static CSS rules — reference CSS variables, theme-independent
+const STATIC_CSS = `
   /* ── Black background overrides ── */
 
-  /* Body — catches class-based black bg (e.g. Creator Studio) */
+  /* HTML + Body — catches class-based black bg (e.g. Creator Studio) */
+  html.${DIM_CLASS},
   html.${DIM_CLASS} body {
     background-color: var(--xdm-bg) !important;
   }
@@ -65,6 +108,11 @@ const BASE_CSS = `
   html.${DIM_CLASS} .r-yfoy6g,
   html.${DIM_CLASS} .r-14lw9ot {
     background-color: var(--xdm-bg) !important;
+  }
+  /* Search bar — the input's opaque bg covers the pill's right border curve.
+     Make it transparent so the pill's border and bg show through. */
+  html.${DIM_CLASS} form[role="search"] input {
+    background-color: transparent !important;
   }
   /* Action-button hover circles — make transparent so they match any parent bg */
   html.${DIM_CLASS} .r-1niwhzg.r-sdzlij {
@@ -160,26 +208,33 @@ const BASE_CSS = `
     border-color: var(--xdm-border) !important;
   }
 
-  /* Scrollbar */
-  html.${DIM_CLASS} {
-    scrollbar-color: var(--xdm-border) var(--xdm-bg);
-  }
 `;
+
+function buildFullCSS() {
+  return buildThemeCSS() + STATIC_CSS;
+}
 
 // Always update the style element — prevents stale CSS after extension reload
 function ensureBaseCSS() {
+  const css = buildFullCSS();
   let style = document.getElementById(DIM_BASE_ID);
   if (!style) {
     style = document.createElement("style");
     style.id = DIM_BASE_ID;
     (document.head || document.documentElement).appendChild(style);
   }
-  if (style.textContent !== BASE_CSS) style.textContent = BASE_CSS;
+  if (style.textContent !== css) style.textContent = css;
 }
 
 // Inject CSS immediately at document_start — don't wait for async storage read.
 // Rules are gated by html.x-dim-active so they're inert until the class is added.
 ensureBaseCSS();
+
+// Optimistically apply dim before async storage read using localStorage as sync cache.
+// First install: cache is null → default to dim. Disabled users: cache is "0" → skip.
+if (localStorage.getItem("__xdm_enabled") !== "0") {
+  document.documentElement.classList.add(DIM_CLASS);
+}
 
 function applyDim() {
   ensureBaseCSS();
@@ -345,17 +400,18 @@ function tryInjectDimOption() {
   const dimBtn = lightsOutBtn.cloneNode(true);
   dimBtn.id = DIM_BTN_ID;
 
-  // Set dim background color
-  dimBtn.style.backgroundColor = "rgb(21, 32, 43)";
+  // Set dim background color to current theme
+  const { hue, sat } = getActiveHueSat();
+  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, 13%)`;
 
-  // Change label to "Dim"
+  // Change label to localized "Dim"
   const label = dimBtn.querySelector("span");
-  if (label) label.textContent = "Dim";
+  if (label) label.textContent = chrome.i18n.getMessage("dimLabel");
 
   // Update radio input
   const input = dimBtn.querySelector('input[type="radio"]');
   if (input) {
-    input.setAttribute("aria-label", "Dim");
+    input.setAttribute("aria-label", chrome.i18n.getMessage("dimLabel"));
     input.checked = false;
   }
 
@@ -451,13 +507,21 @@ function fullRescan() {
 }
 
 // Init — single storage read, then use cached state
-chrome.storage.local.get("enabled", ({ enabled }) => {
+chrome.storage.local.get(["enabled", "theme", "customHue"], ({ enabled, theme, customHue }) => {
+  _theme = theme ?? "dim";
+  _customHue = customHue ?? 210;
+
   if (enabled === undefined) {
     _enabled = true;
     chrome.storage.local.set({ enabled: true });
   } else {
     _enabled = !!enabled;
   }
+  // Sync localStorage cache for instant access at next document_start
+  try { localStorage.setItem("__xdm_enabled", _enabled ? "1" : "0"); } catch (e) {}
+
+  // Re-build CSS with actual theme (may differ from default injected at document_start)
+  ensureBaseCSS();
 
   if (_enabled) {
     // Apply dim immediately if system is dark (avoids flash of black).
@@ -467,6 +531,9 @@ chrome.storage.local.get("enabled", ({ enabled }) => {
       applyDim();
       for (const ms of [500, 1500, 3000, 5000]) setTimeout(fullRescan, ms);
     }
+  } else {
+    // User has dim disabled — remove the optimistic early class
+    removeDim();
   }
 
   startObserver();
@@ -498,10 +565,19 @@ function syncSettingsButtons(enabled) {
   }
 }
 
+// Update the settings page Dim button preview color
+function updateSettingsButtonColor() {
+  const dimBtn = document.getElementById(DIM_BTN_ID);
+  if (!dimBtn) return;
+  const { hue, sat } = getActiveHueSat();
+  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, 13%)`;
+}
+
 // Listen for toggle — updates cached state synchronously
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.enabled) {
     _enabled = !!changes.enabled.newValue;
+    try { localStorage.setItem("__xdm_enabled", _enabled ? "1" : "0"); } catch (e) {}
     if (_enabled) {
       _suspendedForLight = false;
       startBodyObserver();
@@ -512,5 +588,11 @@ chrome.storage.onChanged.addListener((changes) => {
       removeDim();
     }
     syncSettingsButtons(_enabled);
+  }
+  if (changes.theme || changes.customHue) {
+    if (changes.theme) _theme = changes.theme.newValue ?? "dim";
+    if (changes.customHue) _customHue = changes.customHue.newValue ?? 210;
+    ensureBaseCSS();
+    updateSettingsButtonColor();
   }
 });
