@@ -6,6 +6,7 @@ const DIM_CLASS = "x-dim-active";
 
 const THEMES = {
   dim:   { hue: 210, sat: 34 },
+  night: { hue: 220, sat: 14, lit: 10 }, // night-optimised: deep indigo, low saturation, darkest bg
   slate: { hue: 210, sat: 8  },
   jade:  { hue: 150, sat: 34 },
   plum:  { hue: 270, sat: 34 },
@@ -16,18 +17,20 @@ const THEMES = {
 let _theme = "dim";
 let _customHue = 210;
 
-function paletteFromHue(h, s) {
-  const bSat = Math.round(s * 0.47);
+// lit = base background lightness (default 13%). Derived levels scale relative to it.
+function paletteFromHue(h, s, lit = 13) {
+  const bSat    = Math.round(s * 0.47);
+  const litBdr  = lit + 13; // border lightness (26% at default)
   return {
-    bg:         `hsl(${h}, ${s}%, 13%)`,
-    bgHover:    `hsl(${h}, ${Math.round(s * 0.74)}%, 16%)`,
-    bgElevated: `hsl(${h}, ${Math.round(s * 0.71)}%, 20%)`,
-    backdrop:   `hsla(${h}, ${s}%, 13%, 0.85)`,
+    bg:         `hsl(${h}, ${s}%, ${lit}%)`,
+    bgHover:    `hsl(${h}, ${Math.round(s * 0.74)}%, ${lit + 3}%)`,
+    bgElevated: `hsl(${h}, ${Math.round(s * 0.71)}%, ${lit + 7}%)`,
+    backdrop:   `hsla(${h}, ${s}%, ${lit}%, 0.85)`,
     text:       `hsl(${h}, ${Math.round(s * 0.32)}%, 60%)`,
-    border:     `hsl(${h}, ${bSat}%, 26%)`,
+    border:     `hsl(${h}, ${bSat}%, ${litBdr}%)`,
     // Raw HSL components for X's CSS variable format (space-separated, no wrapper)
-    bgRaw:      `${h} ${s}% 13%`,
-    borderRaw:  `${h} ${bSat}% 26%`,
+    bgRaw:      `${h} ${s}% ${lit}%`,
+    borderRaw:  `${h} ${bSat}% ${litBdr}%`,
     mutedRaw:   `${h} ${bSat}% 55%`,
     grayRaw60:  `${h} ${bSat}% 60%`,
     grayRaw50:  `${h} ${bSat}% 50%`,
@@ -35,15 +38,16 @@ function paletteFromHue(h, s) {
 }
 
 function getActiveHueSat() {
-  if (_theme === "custom") return { hue: _customHue, sat: 34 };
-  return THEMES[_theme] || THEMES.dim;
+  if (_theme === "custom") return { hue: _customHue, sat: 34, lit: 13 };
+  const t = THEMES[_theme] || THEMES.dim;
+  return { lit: 13, ...t }; // default lit=13 so existing themes need no change
 }
 
 // ── Dim Theme CSS ──────────────────────────────────────────────────
 
 function buildThemeCSS() {
-  const { hue: h, sat: s } = getActiveHueSat();
-  const p = paletteFromHue(h, s);
+  const { hue: h, sat: s, lit } = getActiveHueSat();
+  const p = paletteFromHue(h, s, lit);
   return `
   html.${DIM_CLASS} {
     --xdm-bg: ${p.bg};
@@ -253,8 +257,8 @@ function syncThemeColor() {
     document.head.appendChild(meta);
   }
   if (_originalThemeColor === null) _originalThemeColor = meta.getAttribute("content");
-  const { hue, sat } = getActiveHueSat();
-  const desired = `hsl(${hue}, ${sat}%, 13%)`;
+  const { hue, sat, lit } = getActiveHueSat();
+  const desired = `hsl(${hue}, ${sat}%, ${lit}%)`;
   if (meta.getAttribute("content") !== desired) {
     meta.setAttribute("content", desired);
   }
@@ -463,8 +467,8 @@ function tryInjectDimOption() {
   dimBtn.id = DIM_BTN_ID;
 
   // Set dim background color to current theme
-  const { hue, sat } = getActiveHueSat();
-  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, 13%)`;
+  const { hue, sat, lit } = getActiveHueSat();
+  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, ${lit}%)`;
 
   // Change label to localized "Dim"
   const label = dimBtn.querySelector("span");
@@ -631,8 +635,8 @@ function syncSettingsButtons(enabled) {
 function updateSettingsButtonColor() {
   const dimBtn = document.getElementById(DIM_BTN_ID);
   if (!dimBtn) return;
-  const { hue, sat } = getActiveHueSat();
-  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, 13%)`;
+  const { hue, sat, lit } = getActiveHueSat();
+  dimBtn.style.backgroundColor = `hsl(${hue}, ${sat}%, ${lit}%)`;
 }
 
 // Listen for toggle — updates cached state synchronously
